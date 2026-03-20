@@ -92,14 +92,38 @@ export default function Overview({ data, metrics }: { data: HousingRow[]; metric
   return (
     <div className="space-y-10 max-w-7xl mx-auto">
 
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-1" style={{ color: C.text }}>
-          Boston Housing Analysis
-        </h1>
-        <p className="text-sm" style={{ color: C.muted }}>
-          506 real estate records · 13 socioeconomic features · Random Forest model
-        </p>
+      {/* ── PROBLEM STATEMENT ── */}
+      <div className="rounded-2xl p-7 relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #1a0e2e 0%, #0e1420 60%, #0a1628 100%)", border: "1px solid #a78bfa33", boxShadow: "0 0 60px #a78bfa0a" }}>
+        {/* bg glow */}
+        <div style={{ position:"absolute", top:-40, right:-40, width:200, height:200, borderRadius:"50%", background:"#a78bfa", opacity:0.05, filter:"blur(60px)" }} />
+        <div style={{ position:"absolute", bottom:-40, left:80, width:160, height:160, borderRadius:"50%", background:"#34d399", opacity:0.04, filter:"blur(50px)" }} />
+
+        <div className="relative">
+          <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color:"#a78bfa88" }}>Problem Statement</div>
+          <h1 className="text-3xl font-bold tracking-tight mb-3" style={{ color: C.text }}>
+            What factors drive house prices in Boston?
+          </h1>
+          <p className="text-sm leading-relaxed mb-5" style={{ color:"#9ca3af", maxWidth:680 }}>
+            Using 506 real estate records from the Boston area, this analysis identifies the key socioeconomic
+            and environmental factors that influence median home values — and builds a predictive model to
+            estimate property prices based on those features.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {[
+              { label:"Dataset", val:"Boston Housing (UCI)", color:"#a78bfa" },
+              { label:"Records", val:"506 properties",       color:"#34d399" },
+              { label:"Features", val:"13 variables",        color:"#f59e0b" },
+              { label:"Model", val:"Random Forest",          color:"#f472b6" },
+              { label:"R² Score", val: metrics.r2.toFixed(3), color:"#38bdf8" },
+            ].map(({ label, val, color }) => (
+              <div key={label} className="px-3 py-1.5 rounded-xl text-xs"
+                style={{ background:`${color}12`, border:`1px solid ${color}33`, color }}>
+                <span style={{ color:"#6b7280" }}>{label}: </span>{val}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── DASHBOARD SUMMARY ── */}
@@ -248,7 +272,8 @@ export default function Overview({ data, metrics }: { data: HousingRow[]; metric
                 <XAxis dataKey="range" tick={{ fill: C.muted, fontSize: 10 }} interval={4} />
                 <YAxis tick={{ fill: C.muted, fontSize: 10 }} />
                 <Tooltip contentStyle={TT} />
-                <ReferenceLine x={`${avgPrice.toFixed(0)}k`} stroke="#f43f5e" strokeDasharray="4 2"
+                <ReferenceLine x={histData.reduce((closest, d) => Math.abs(parseFloat(d.range) - avgPrice) < Math.abs(parseFloat(closest.range) - avgPrice) ? d : closest, histData[0]).range}
+                  stroke="#f43f5e" strokeDasharray="4 2"
                   label={{ value: `Mean $${avgPrice.toFixed(1)}k`, fill: "#f43f5e", fontSize: 10 }} />
                 <Bar dataKey="count" fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} name="Properties" />
               </BarChart>
@@ -368,6 +393,60 @@ export default function Overview({ data, metrics }: { data: HousingRow[]; metric
           </p>
         </Card>
       </section>
+
+      {/* ── CONCLUSION ── */}
+      <section>
+        <SectionTitle>📋 Conclusion</SectionTitle>
+        <Card glow>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: CHART_COLORS[0] }}>Key Findings</div>
+              <div className="space-y-3">
+                {[
+                  { icon:"🏠", text:`Larger homes (7+ rooms) cost ${roomsPct}% more than smaller ones — room count is the single strongest price driver (r = ${corr("RM")})` },
+                  { icon:"🚨", text:`Crime has a major negative impact — low-crime areas command ${crimePct}% higher prices than high-crime zones` },
+                  { icon:"🌊", text:`River proximity adds a ${riverPct}% premium — location remains a top-tier pricing factor` },
+                  { icon:"📉", text:`Lower-status population % (LSTAT) is the strongest negative predictor (r = ${corr("LSTAT")}) — socioeconomic context matters most` },
+                  { icon:"🏭", text:"NOx concentration and distance to employment centers also significantly affect prices — environmental quality is priced in" },
+                ].map(({ icon, text }) => (
+                  <div key={text} className="flex gap-3 text-sm" style={{ color:"#9ca3af" }}>
+                    <span className="shrink-0 mt-0.5">{icon}</span>
+                    <span style={{ lineHeight:1.6 }}>{text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: CHART_COLORS[1] }}>What Matters Most for Pricing</div>
+              <div className="space-y-2.5">
+                {Object.entries(metrics.feature_importances)
+                  .sort((a,b) => b[1]-a[1]).slice(0,5)
+                  .map(([feat, imp], i) => (
+                    <div key={feat}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span style={{ color:"#9ca3af" }}>{feat} — {FEATURE_DESCRIPTIONS[feat]?.split(" ").slice(0,4).join(" ")}...</span>
+                        <span className="font-bold" style={{ color: CHART_COLORS[i] }}>{(imp*100).toFixed(1)}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full" style={{ background:"#1f2937" }}>
+                        <div className="h-1.5 rounded-full transition-all" style={{ width:`${imp*100*2}%`, background: CHART_COLORS[i], maxWidth:"100%" }} />
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              <div className="mt-6 p-4 rounded-xl text-sm" style={{ background:"#0e1420", border:"1px solid #1f2937" }}>
+                <div className="font-semibold mb-1" style={{ color: C.text }}>Bottom Line</div>
+                <p style={{ color:"#9ca3af", lineHeight:1.6 }}>
+                  Room count and socioeconomic status explain the majority of price variance.
+                  The Random Forest model captures <span style={{ color: CHART_COLORS[0], fontWeight:600 }}>{(metrics.r2*100).toFixed(0)}%</span> of
+                  this variance with an average error of just <span style={{ color: CHART_COLORS[1], fontWeight:600 }}>${(metrics.mae*1000).toLocaleString(undefined,{maximumFractionDigits:0})}</span> —
+                  making it a reliable tool for property valuation.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </section>
+
     </div>
   );
 }

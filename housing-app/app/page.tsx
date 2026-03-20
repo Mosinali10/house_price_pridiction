@@ -18,11 +18,26 @@ export default function Home() {
   const [data, setData] = useState<HousingRow[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch("/housing.json").then(r => r.json()).then(setData);
-    fetch("/metrics.json").then(r => r.json()).then(setMetrics);
+    Promise.all([
+      fetch("/housing.json").then(r => r.json()),
+      fetch("/metrics.json").then(r => r.json()),
+    ]).then(([d, m]) => { setData(d); setMetrics(m); })
+      .catch(() => setError(true));
   }, []);
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "#080b14" }}>
+        <div className="text-center">
+          <div className="text-4xl mb-4">⚠️</div>
+          <p className="text-sm" style={{ color: "#f43f5e" }}>Failed to load data. Please refresh.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!data.length || !metrics) {
     return (
@@ -37,16 +52,16 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#080b14" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "#080b14" }}>
 
       {/* Sidebar */}
       <aside
-        className="flex flex-col transition-all duration-300 shrink-0"
+        className="flex flex-col transition-all duration-300 shrink-0 overflow-y-auto"
         style={{
           width: sidebarOpen ? 256 : 60,
           background: "#080b14",
           borderRight: "1px solid #1f2937",
-          position: "sticky", top: 0, height: "100vh",
+          height: "100vh",
         }}
       >
         {/* Logo */}
